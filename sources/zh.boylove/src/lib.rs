@@ -4,6 +4,7 @@ mod html;
 mod json;
 mod net;
 mod setting;
+mod time;
 
 use aidoku::{
 	Chapter, DeepLinkHandler, DeepLinkResult, DynamicFilters, Filter, FilterValue, HashMap, Home,
@@ -18,9 +19,10 @@ use html::{
 	ChapterPage as _, FiltersPage as _, HomePage as _, MangaPage as _, TryElement as _,
 	TrySelector as _,
 };
-use json::{daily_update, manga_page_result, random};
+use json::{chapter_list, daily_update, manga_page_result, random};
 use net::{Api, Url};
 use setting::change_charset;
+use time::DayOfWeek;
 
 struct Boylove;
 
@@ -48,10 +50,8 @@ impl Source for Boylove {
 		needs_details: bool,
 		needs_chapters: bool,
 	) -> Result<Manga> {
-		let manga_page = Url::manga(&manga.key).request()?.html()?;
-
 		if needs_details {
-			let updated_details = manga_page.manga_details()?;
+			let updated_details = Url::manga(&manga.key).request()?.html()?.manga_details()?;
 
 			manga = Manga {
 				chapters: manga.chapters,
@@ -65,7 +65,11 @@ impl Source for Boylove {
 			}
 		}
 
-		manga.chapters = manga_page.chapters()?;
+		let chapters = Url::chapter_list(&manga.key)
+			.request()?
+			.json_owned::<chapter_list::Root>()?
+			.into();
+		manga.chapters = Some(chapters);
 
 		Ok(manga)
 	}
@@ -107,18 +111,14 @@ impl DeepLinkHandler for Boylove {
 			}
 
 			(Some("home"), Some("index"), Some("dailyupdate1"), None, None) => {
-				let id = Url::DailyUpdatePage
-					.request()?
-					.html()?
-					.try_select_first("ul.stui-list > li.active")?
-					.text()
-					.ok_or_else(|| {
-						error!("No text content for selector: `ul.stui-list > li.active`",)
-					})?;
+				let day_of_week = DayOfWeek::today()?;
+				let id = day_of_week.as_id().into();
+
+				let name = day_of_week.as_name().into();
 
 				Some(DeepLinkResult::Listing(Listing {
-					id: id.clone(),
-					name: id,
+					id,
+					name,
 					..Default::default()
 				}))
 			}
@@ -128,23 +128,26 @@ impl DeepLinkHandler for Boylove {
 				Some("index"),
 				Some("dailyupdate1"),
 				Some("weekday"),
-				Some(week_of_day),
+				Some(day_of_week),
 			) => {
-				let id = match week_of_day {
+				let id = day_of_week.into();
+
+				let name = match day_of_week {
 					"11" => "最新",
-					"6" => "週日",
 					"0" => "週一",
 					"1" => "週二",
 					"2" => "週三",
 					"3" => "週四",
 					"4" => "週五",
 					"5" => "週六",
+					"6" => "週日",
 					_ => return Ok(None),
-				};
+				}
+				.into();
 
 				Some(DeepLinkResult::Listing(Listing {
-					id: id.into(),
-					name: id.into(),
+					id,
+					name,
 					..Default::default()
 				}))
 			}
@@ -156,7 +159,7 @@ impl DeepLinkHandler for Boylove {
 				Some("w"),
 				Some("recommend.html" | "recommend"),
 			) => Some(DeepLinkResult::Listing(Listing {
-				id: "無碼專區".into(),
+				id: "recommend".into(),
 				name: "無碼專區".into(),
 				..Default::default()
 			})),
@@ -168,7 +171,7 @@ impl DeepLinkHandler for Boylove {
 				Some("w"),
 				Some("topestmh.html" | "topestmh"),
 			) => Some(DeepLinkResult::Listing(Listing {
-				id: "排行榜".into(),
+				id: "topestmh".into(),
 				name: "排行榜".into(),
 				..Default::default()
 			})),
@@ -196,15 +199,15 @@ impl Home for Boylove {
 
 impl ListingProvider for Boylove {
 	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
-		let manga_page_result = match listing.id.as_str() {
-			id @ ("最新" | "週日" | "週一" | "週二" | "週三" | "週四" | "週五" | "週六") => {
-				Url::daily_update(id, page)?
+		let manga_page_result = match listing.name.as_str() {
+			"最新" | "週一" | "週二" | "週三" | "週四" | "週五" | "週六" | "週日" => {
+				Url::daily_update(&listing.id, page)
 					.request()?
 					.json_owned::<daily_update::Root>()?
 					.into()
 			}
 
-			id @ ("無碼專區" | "排行榜") => Url::listing(id, page)?
+			"無碼專區" | "排行榜" => Url::listing(&listing.id, page)
 				.request()?
 				.json_owned::<manga_page_result::Root>()?
 				.into(),
@@ -214,7 +217,7 @@ impl ListingProvider for Boylove {
 				.json_owned::<random::Root>()?
 				.into(),
 
-			id => bail!("Invalid listing ID: `{id}`"),
+			name => bail!("Invalid listing name: `{name}`"),
 		};
 		Ok(manga_page_result)
 	}

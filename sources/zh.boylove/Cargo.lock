@@ -17,9 +17,8 @@ dependencies = [
 [[package]]
 name = "aidoku"
 version = "0.3.0"
-source = "git+https://github.com/Aidoku/aidoku-rs.git#d922d82068d18b0c115a2185a86cbc3e849e739b"
+source = "git+https://github.com/Aidoku/aidoku-rs.git#7c0848165e04904aa3d5c8d7467c5c7f04a25a37"
 dependencies = [
- "chrono",
  "euclid",
  "hashbrown",
  "num-traits",
@@ -32,7 +31,7 @@ dependencies = [
 [[package]]
 name = "aidoku-test"
 version = "1.0.0"
-source = "git+https://github.com/Aidoku/aidoku-rs.git#d922d82068d18b0c115a2185a86cbc3e849e739b"
+source = "git+https://github.com/Aidoku/aidoku-rs.git#7c0848165e04904aa3d5c8d7467c5c7f04a25a37"
 dependencies = [
  "quote",
  "syn",
@@ -66,6 +65,7 @@ dependencies = [
  "aidoku",
  "aidoku-test",
  "chinese-number",
+ "chrono",
  "md5",
  "paste",
  "regex",
