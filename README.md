@@ -1,6 +1,7 @@
 # Aidoku Community Sources
 
 This repository hosts unofficial sources maintained by community members that are installable in [Aidoku](https://github.com/Aidoku/Aidoku).
+I, LeatherHead, modified this source to redirect to my domain to test out other sources.
 
 ## Usage
 
