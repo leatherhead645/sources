@@ -1,0 +1,10 @@
+{
+    "info": {
+        "id": "en.lilymanga",
+        "name": "Lily Manga",
+        "version": 1,
+        "url": "https://lilymanga.net",
+        "contentRating": 2,
+        "languages": ["en"]
+    }
+}
